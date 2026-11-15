@@ -1,0 +1,3 @@
+- insert:
+    - id: observer
+      name: 'dsh-observer'

@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Sidecar Observer",
+    "description": "A second model narrates the main conversation's progress in a floating panel: what just finished, what comes next. Ask it questions, tune frequency and model.",
+    "detail": "README.md"
+  }
+}

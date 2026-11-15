@@ -1,0 +1,39 @@
+{
+  "name": "dsh-observer",
+  "version": "0.6.0",
+  "private": true,
+  "type": "module",
+  "description": "旁路观察者：用另一个模型在悬浮窗里实时播报主对话的进度（刚做了什么、接下来做什么），可追问、可调频率与模型，不干涉主会话。",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "locale",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "observer",
+    "progress",
+    "sidecar"
+  ],
+  "license": "MIT"
+}

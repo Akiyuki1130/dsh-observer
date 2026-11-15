@@ -1,0 +1,120 @@
+# dsh-observer · 旁路观察者
+
+用**另一个模型**在悬浮窗里实时播报主对话的进度：刚做了什么、接下来要做什么、有没有卡住。
+它只读会话事件流，不向主会话注入任何消息，**不干涉主对话**。
+
+
+## 它解决什么问题
+
+DSH 的模型在长任务里会连续调用几十次工具，界面上只有「Deep diving…」。
+你只能等，不知道它干到哪了、是不是卡住了。
+
+`dsh-observer` 在宿主侧订阅 `session/event`，按你设定的频率把最近的进展交给一个**旁路模型**，
+生成一段中文播报，显示在页面左下角的悬浮窗里。你还可以直接在悬浮窗里追问它。
+
+## 功能
+
+- **两种入口**：
+  - **「观察」栏**：对话区顶部 tab（Chat / 观察 / 文件 / Context），整栏展示播报、追问与设置。
+  - **悬浮窗**：默认在对话区左下角（输入框上方），可拖动、可收起成小胶囊；位置记在 localStorage。
+- **悬浮窗开关**：设置里可关掉悬浮窗（只留「观察」栏）；移动端另有独立开关，**默认关**，窄屏默认不显示悬浮窗。
+- **移动端适配**：窄屏自动变成贴底全宽卡片；打开「观察」栏时悬浮窗自动让位。
+- **模型可选**：
+  - 已有提供商：下拉选 provider / model / 思考强度（low / medium / high / xhigh / max，取决于模型）。
+  - 自定义端点：填 baseURL + API Key + 模型 ID（OpenAI 兼容 `/chat/completions`）。
+- **频率可选**：永不 / 30 / 60 / 120 / 180 / 300 / 600 秒，每档都标注预计 token 消耗；「永不」= 只保留手动播报。
+- **立即播报**：窗口内一键「立即播报当前状况」，不用等下一个周期。
+- **追问输入框**：问它「主对话现在怎么样了」「卡住了吗」，它基于事件流回答。
+- **thinking 开关**：默认开。开启后旁路模型能看到主模型最近的推理片段，判断「接下来」更准。
+- **深色 / 浅色主题**：全部使用 DSH 主题 token，跟随宿主切换。
+- **远端可用**：不依赖 loopback、不额外加鉴权，反向代理后面照常工作。
+
+## 安装
+
+```bash
+# 1. 把插件目录放到任意位置，例如 /data/dsh/home/nya/dsh-observer
+# 2. 装进 profile
+dsh plugin --profile web add /data/dsh/home/nya/dsh-observer
+# 3. 重启 DSH（新 bundle 有时可热加载，但重启最稳）
+```
+
+或者用 `plugin_manager` 工具：
+
+```
+plugin_manager action=install_bundle target=/data/dsh/home/nya/dsh-observer
+```
+
+安装后刷新页面，左下角会出现「● 旁路观察」胶囊。
+
+## 配置
+
+首次使用点开胶囊 → ⚙ 设置：
+
+| 项 | 说明 |
+| --- | --- |
+| 模型来源 | 「已有提供商」或「自定义端点」 |
+| 提供商 / 模型 | 来自 `ctx.llm.listProviders()` / `listModels()` |
+| 思考强度 | 来自 `ctx.llm.resolveModel()` 的 `reasoning.efforts` |
+| 播报频率 | 永不 / 30–600 秒，附预计 token/时 |
+| 读取主对话思考 | 默认开；关掉后只读正文与工具调用 |
+| 启用播报 | 总开关；关掉后仍可手动 ↻ |
+| 显示悬浮窗 | 默认开；关掉后只保留「观察」栏 |
+| 移动端显示悬浮窗 | 默认关；窄屏默认不显示悬浮窗 |
+
+设置面板里的改动**必须点「保存」才生效**，未保存时底部会显示「未保存」。
+
+配置存在 `$DSH_HOME/observer/config.json`，自定义端点的 API Key 存在
+`$DSH_HOME/observer/secret.json`（0600）。**不会写 profile 的 `cordis.patch.yml`。**
+
+## 工作原理
+
+```
+主会话 ──session/event──▶ 宿主侧 observer 插件
+                              │  按频率取最近 N 条事件（正文/推理/工具调用/工具结果）
+                              ▼
+                        ctx.llm.stream({ provider, model, ... })  ← 旁路模型
+                              │
+                              ▼
+                        /api/observer/state  ← 浏览器轮询（2s）
+                              │
+                              ▼
+                        悬浮窗渲染
+```
+
+- 只在主会话 `running` 时自动播报；回合结束后不再打扰。
+- 跳过 `origin === 'subagent'` 的子代理会话。
+- 旁路调用带 45 秒超时；失败只记录错误，不影响主会话。
+- 追问走 `/api/observer/ask`，同样只读事件流。
+
+## HTTP 接口
+
+| 路径 | 方法 | 说明 |
+| --- | --- | --- |
+| `/api/observer/state` | GET | 当前会话、最近播报、token 累计 |
+| `/api/observer/config` | GET/POST | 读 / 写配置 |
+| `/api/observer/models` | GET | 提供商与模型列表 |
+| `/api/observer/model` | GET | 某模型的思考强度选项 |
+| `/api/observer/now` | POST | 强制播报一次 |
+| `/api/observer/ask` | POST | 追问 |
+| `/api/observer/health` | GET | 健康检查 |
+
+## 已知限制
+
+- 旁路模型只能看到**事件流里可见的内容**（正文、推理片段、工具名与结果），
+  看不到主模型的隐藏状态，所以「接下来」是推断，可能不准。
+- 播报有延迟：到点后要等下一个 tick（5 秒）才真正调用。
+- 频率越高 token 消耗越大；30 秒档在长任务里可能到 40 万 token/时（设置里已标注）。
+- 只支持 web 端。
+
+## 版本
+
+- **v1**：宿主事件采集 + 旁路调用 + HTTP 接口 + 悬浮窗骨架，端到端跑通。
+- **v2**：修定位（贴输入框）、修拖拽吞点击、设置面板、深色模式按钮对比度、token 统计。
+- **v3**：播报块视觉、空状态、胶囊 hover、展开卡片高度夹紧、移动端复测。
+- **v5**：装进主 profile 并远端验证；主 profile 配置改为 deepseek-account。
+- **v6**：新增「观察」栏（`conversation.view`，order 26）、悬浮窗开关（默认开）、移动端悬浮窗开关（默认关）、频率「永不」、窗口内「立即播报当前状况」；模型来源二选一改为必须保存才生效（未保存提示）；观察栏打开时悬浮窗自动隐藏。
+- **v4**：code-reviewer 修复（失败指数退避、`resolveModelInfo`、abort 判定、`/now` 错误反馈、SSRF 校验、并发互斥、长回合收尾播报）；ux-reviewer 修复（移动端不再盖住输入框、拖拽夹紧在视口内、胶囊改为可键盘操作的 button + Esc 关闭、浅色三级灰改二级灰、深色 Toggle/Segmented 对比度、hover 规则从 inline 挪到 CSS、触控目标 ≥32px、焦点环、滚动渐隐、设置面板单头部）。
+
+## License
+
+MIT
