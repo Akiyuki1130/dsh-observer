@@ -111,9 +111,11 @@ plugin_manager action=install_bundle target=/data/dsh/home/nya/dsh-observer
 - **v1**：宿主事件采集 + 旁路调用 + HTTP 接口 + 悬浮窗骨架，端到端跑通。
 - **v2**：修定位（贴输入框）、修拖拽吞点击、设置面板、深色模式按钮对比度、token 统计。
 - **v3**：播报块视觉、空状态、胶囊 hover、展开卡片高度夹紧、移动端复测。
+- **v4**：code-reviewer 修复（失败指数退避、`resolveModelInfo`、abort 判定、`/now` 错误反馈、SSRF 校验、并发互斥、长回合收尾播报）；ux-reviewer 修复（移动端不再盖住输入框、拖拽夹紧在视口内、胶囊改为可键盘操作的 button + Esc 关闭、浅色三级灰改二级灰、深色 Toggle/Segmented 对比度、hover 规则从 inline 挪到 CSS、触控目标 ≥32px、焦点环、滚动渐隐、设置面板单头部）。
 - **v5**：装进主 profile 并远端验证；主 profile 配置改为 deepseek-account。
 - **v6**：新增「观察」栏（`conversation.view`，order 26）、悬浮窗开关（默认开）、移动端悬浮窗开关（默认关）、频率「永不」、窗口内「立即播报当前状况」；模型来源二选一改为必须保存才生效（未保存提示）；观察栏打开时悬浮窗自动隐藏。
-- **v4**：code-reviewer 修复（失败指数退避、`resolveModelInfo`、abort 判定、`/now` 错误反馈、SSRF 校验、并发互斥、长回合收尾播报）；ux-reviewer 修复（移动端不再盖住输入框、拖拽夹紧在视口内、胶囊改为可键盘操作的 button + Esc 关闭、浅色三级灰改二级灰、深色 Toggle/Segmented 对比度、hover 规则从 inline 挪到 CSS、触控目标 ≥32px、焦点环、滚动渐隐、设置面板单头部）。
+- **v7**：修会话切换串播报（宿主不再回退「最近活跃会话」+ 客户端请求序号/会话 id 双重校验，丢弃过期响应）；默认频率改为「永不」；横屏（≥900px）「观察」栏改两栏布局（左播报+操作、右追问+示例问题），竖屏与悬浮窗保持单栏；新增播报历史（最近 10 条，可回看）、暂停/继续、复制播报。
+- **v7 审查修复**：阻断「改自定义端点 URL 把已存密钥发到新地址」的外泄链（换 URL 未填新 key 时清空旧 key 并提示）；路由注册失败回滚；切会话不再清空配置；历史回看改用稳定时间戳；拖拽加位移阈值；清除密钥不再顺带保存草稿；tab 激活状态改用模块标志；`/models` 并发 + 超时；`/ask` 长度上限；413 不再断连；token 统计计入缓存读写；`ask`/`narrate` 互斥；会话 Map 淘汰兜底；`zIndex` 降到 1100；卸载时清理注入样式。
 
 ## License
 
