@@ -1,6 +1,6 @@
 {
   "name": "dsh-observer",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "private": true,
   "type": "module",
   "description": "旁路观察者：用另一个模型在悬浮窗里实时播报主对话的进度（刚做了什么、接下来做什么），可追问、可调频率与模型，不干涉主会话。",
